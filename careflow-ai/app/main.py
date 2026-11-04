@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from uuid import uuid4
+from app.classifier import classify_ticket
 
 app = FastAPI(title="CareFlow AI")
 
@@ -17,13 +18,15 @@ def health_check():
 @app.post("/tickets", status_code=201)
 def create_ticket(ticket: TicketCreate):
     ticket_id = str(uuid4())
+    classification = classify_ticket(ticket.message)
 
     new_ticket = {
-        "id": ticket_id,
-        "patient_name": ticket.patient_name,
-        "message": ticket.message,
-        "status": "new"
-    }
+    "id": ticket_id,
+    "patient_name": ticket.patient_name,
+    "message": ticket.message,
+    "status": "new",
+    **classification
+}
 
     tickets[ticket_id] = new_ticket
     return new_ticket
