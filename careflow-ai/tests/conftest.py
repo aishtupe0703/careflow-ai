@@ -14,8 +14,14 @@ test_url = make_url(DATABASE_URL).set(
     database="careflow_test_db"
 )
 
-if test_url.database != "careflow_test_db":
-    raise RuntimeError("Unsafe test database configuration")
+if (
+    test_url.database != "careflow_test_db"
+    or test_url.host not in ("localhost", "127.0.0.1")
+    or test_url.port != 5432
+):
+    raise RuntimeError(
+        "Tests must use the local careflow_test_db database"
+    )
 
 test_engine = create_engine(
     test_url,

@@ -1,11 +1,3 @@
-
-from fastapi.testclient import TestClient
-from app.main import app
-from app.classifier import classify_ticket
-
-client = TestClient(app)
-
-
 def test_health_check(client):
     response = client.get("/health")
 
@@ -87,3 +79,9 @@ def test_emergency_ticket_routing(client):
     assert data["category"] == "potential_emergency"
     assert data["priority"] == "critical"
     assert data["requires_human_review"] is True
+
+def test_ticket_count_starts_at_zero(client):
+    response = client.get("/tickets")
+
+    assert response.status_code == 200
+    assert response.json() == []
