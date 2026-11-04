@@ -21,12 +21,12 @@ def create_ticket(ticket: TicketCreate):
     classification = classify_ticket(ticket.message)
 
     new_ticket = {
-    "id": ticket_id,
-    "patient_name": ticket.patient_name,
-    "message": ticket.message,
-    "status": "new",
-    **classification
-}
+        "id": ticket_id,
+        "patient_name": ticket.patient_name,
+        "message": ticket.message,
+        "status": "new",
+        **classification,
+    }
 
     tickets[ticket_id] = new_ticket
     return new_ticket
