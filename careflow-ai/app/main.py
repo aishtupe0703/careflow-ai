@@ -8,8 +8,13 @@ from app.classifier import classify_ticket
 from app.database import get_db
 from app.models import Ticket
 
-app = FastAPI(title="CareFlow AI")
+from typing import Callable
 
+from app.services.classification_service import classify_for_ticket
+
+app = FastAPI(title="CareFlow AI")
+def get_ticket_classifier() -> Callable[[str], dict]:
+    return classify_for_ticket
 
 class TicketCreate(BaseModel):
     patient_name: str = Field(min_length=1)
@@ -34,14 +39,16 @@ def serialize_ticket(ticket: Ticket) -> dict:
 def health_check():
     return {"status": "healthy"}
 
-
 @app.post("/tickets", status_code=201)
 def create_ticket(
     ticket: TicketCreate,
     db: Session = Depends(get_db),
+    classifier: Callable[[str], dict] = Depends(
+        get_ticket_classifier
+    ),
 ):
-    classification = classify_ticket(ticket.message)
-
+    classification = classifier(ticket.message)
+    
     new_ticket = Ticket(
         patient_name=ticket.patient_name,
         message=ticket.message,

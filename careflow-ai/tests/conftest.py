@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from app.database import Base, get_db, DATABASE_URL
 from app.main import app
 
+from app.classifier import classify_ticket
+from app.main import get_ticket_classifier
+
 # Construct a URL pointing ONLY to the test database.
 test_url = make_url(DATABASE_URL).set(
     database="careflow_test_db"
@@ -59,6 +62,9 @@ def client(setup_test_database):
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_ticket_classifier] = (
+        lambda: classify_ticket
+    )
 
     try:
         with TestClient(app) as test_client:
