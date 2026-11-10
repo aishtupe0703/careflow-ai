@@ -18,20 +18,22 @@ TEAM_BY_CATEGORY = {
 
 
 def classify_for_ticket(message: str) -> dict:
-    # Step 1: Apply existing deterministic rules.
+    # Step 1: Apply deterministic classification.
     fallback = classify_ticket(message)
 
     # Step 2: Preserve recognized emergency escalation.
     if fallback["category"] == "potential_emergency":
-        return fallback
+        return {
+            **fallback,
+            "classification_source": "safety_rule",
+        }
 
-    # Step 3: Ask OpenAI to classify other messages.
+    # Step 3: Classify other messages using OpenAI.
     try:
         ai_result = classify_with_openai(message)
-
         category = ai_result.category
 
-        # Step 4: Enforce routing rules in Python.
+        # Step 4: Enforce priority and routing in Python.
         priority = (
             "critical"
             if category == "potential_emergency"
@@ -49,12 +51,17 @@ def classify_for_ticket(message: str) -> dict:
             "priority": priority,
             "assigned_team": TEAM_BY_CATEGORY[category],
             "requires_human_review": True,
+            "classification_source": "openai",
         }
 
     except (OpenAIError, RuntimeError, ValueError, KeyError) as exc:
-        # Do not log the patient message or API credentials.
+        # Don't log patient messages or API credentials.
         logger.warning(
             "AI classification failed; using fallback: %s",
             type(exc).__name__,
         )
-        return fallback
+
+        return {
+            **fallback,
+            "classification_source": "fallback",
+        }

@@ -58,3 +58,20 @@ def test_emergency_bypasses_openai(monkeypatch):
     assert result["category"] == "potential_emergency"
     assert result["priority"] == "critical"
     assert result["requires_human_review"] is True
+
+def test_emergency_classification_source(monkeypatch):
+    def unexpected_openai(message):
+        raise AssertionError("OpenAI should not be called")
+
+    monkeypatch.setattr(
+        service,
+        "classify_with_openai",
+        unexpected_openai,
+    )
+
+    result = service.classify_for_ticket(
+        "My father has severe chest pain"
+    )
+
+    assert result["category"] == "potential_emergency"
+    assert result["classification_source"] == "safety_rule"
