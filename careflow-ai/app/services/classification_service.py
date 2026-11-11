@@ -6,8 +6,9 @@ from openai import OpenAIError
 from app.classifier import classify_ticket
 from app.services.openai_classifier import classify_with_openai
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
+logger = logging.getLogger("uvicorn.error")
 
 TEAM_BY_CATEGORY = {
     "appointment": "reception",
@@ -40,9 +41,10 @@ def record_classification(result: dict, started: float) -> dict:
 
     return result
 
-started = time.perf_counter()
+
 
 def classify_for_ticket(message: str) -> dict:
+    started = time.perf_counter()
     # Step 1: Apply deterministic classification.
     fallback = classify_ticket(message)
 
@@ -86,25 +88,24 @@ def classify_for_ticket(message: str) -> dict:
         )
     
 
+    
     except (OpenAIError, RuntimeError, ValueError, KeyError) as exc:
-        # Don't log patient messages or API credentials.
         logger.warning(
             "AI classification failed; using fallback: %s",
             type(exc).__name__,
         )
 
         if fallback["category"] == "general":
-            return {
+            fallback = {
                 **fallback,
                 "priority": "high",
                 "requires_human_review": True,
-                "classification_source": "fallback",
             }
 
         return record_classification(
             {
                 **fallback,
                 "classification_source": "fallback",
-            }, 
+            },
             started,
         )

@@ -29,6 +29,24 @@ def test_classification_records_latency(monkeypatch):
     assert isinstance(result["latency_ms"], float)
     assert result["latency_ms"] >= 0
 
+def test_fallback_records_completion_log(monkeypatch, caplog):
+    def failing_openai(message):
+        raise RuntimeError("Simulated API failure")
+
+    monkeypatch.setattr(
+        service,
+        "classify_with_openai",
+        failing_openai,
+    )
+
+    with caplog.at_level("INFO", logger="uvicorn.error"):
+        result = service.classify_for_ticket(
+            "An unfamiliar administrative request"
+        )
+
+    assert result["classification_source"] == "fallback"
+    assert "latency_ms" in result
+    assert "classification_completed" in caplog.text
 
 def test_ai_appointment_classification(monkeypatch):
     def fake_openai(message):
