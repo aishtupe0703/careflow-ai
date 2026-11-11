@@ -8,14 +8,21 @@ from app.services import classification_service as service
 def test_ai_classification_saved_to_database(client, monkeypatch):
     # Simulate an OpenAI response.
     def fake_openai(message):
-        return SimpleNamespace(
+        classification = SimpleNamespace(
             category="billing",
             priority="high",
             assigned_team="billing",
             requires_human_review=True,
-            summary="Patient has a billing question.",
+            summary="Patient reports an unrecognized charge.",
         )
 
+        return SimpleNamespace(
+            classification=classification,
+            model="test-model",
+            input_tokens=100,
+            output_tokens=30,
+            total_tokens=130,
+        )
     monkeypatch.setattr(
         service,
         "classify_with_openai",

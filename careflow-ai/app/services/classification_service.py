@@ -6,8 +6,6 @@ from openai import OpenAIError
 from app.classifier import classify_ticket
 from app.services.openai_classifier import classify_with_openai
 
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.INFO)
 logger = logging.getLogger("uvicorn.error")
 
 TEAM_BY_CATEGORY = {
@@ -39,6 +37,16 @@ def record_classification(result: dict, started: float) -> dict:
         latency_ms,
     )
 
+    if result["classification_source"] == "openai":
+        logger.info(
+            "openai_usage model=%s input_tokens=%d "
+            "output_tokens=%d total_tokens=%d",
+            result["model"],
+            result["input_tokens"],
+            result["output_tokens"],
+            result["total_tokens"],
+        )
+
     return result
 
 
@@ -60,7 +68,8 @@ def classify_for_ticket(message: str) -> dict:
 
     # Step 3: Classify other messages using OpenAI.
     try:
-        ai_result = classify_with_openai(message)
+        ai_response = classify_with_openai(message)
+        ai_result = ai_response.classification
         category = ai_result.category
 
         # Step 4: Enforce priority and routing in Python.
@@ -83,6 +92,10 @@ def classify_for_ticket(message: str) -> dict:
                 "assigned_team": TEAM_BY_CATEGORY[category],
                 "requires_human_review": True,
                 "classification_source": "openai",
+                "model": ai_response.model,
+                "input_tokens": ai_response.input_tokens,
+                "output_tokens": ai_response.output_tokens,
+                "total_tokens": ai_response.total_tokens,
             },
             started,
         )

@@ -4,14 +4,23 @@ from types import SimpleNamespace
 from app.services import classification_service as service
 
 
+
 def test_classification_records_latency(monkeypatch):
     def fake_openai(message):
-        return SimpleNamespace(
+        classification = SimpleNamespace(
             category="appointment",
             priority="normal",
             assigned_team="reception",
             requires_human_review=True,
             summary="Appointment request",
+        )
+
+        return SimpleNamespace(
+            classification=classification,
+            model="test-model",
+            input_tokens=100,
+            output_tokens=30,
+            total_tokens=130,
         )
 
     monkeypatch.setattr(
@@ -28,6 +37,10 @@ def test_classification_records_latency(monkeypatch):
     assert "latency_ms" in result
     assert isinstance(result["latency_ms"], float)
     assert result["latency_ms"] >= 0
+    assert result["model"] == "test-model"
+    assert result["input_tokens"] == 100
+    assert result["output_tokens"] == 30
+    assert result["total_tokens"] == 130
 
 def test_fallback_records_completion_log(monkeypatch, caplog):
     def failing_openai(message):
@@ -48,9 +61,10 @@ def test_fallback_records_completion_log(monkeypatch, caplog):
     assert "latency_ms" in result
     assert "classification_completed" in caplog.text
 
+
 def test_ai_appointment_classification(monkeypatch):
     def fake_openai(message):
-        return SimpleNamespace(
+        classification = SimpleNamespace(
             category="appointment",
             priority="normal",
             assigned_team="reception",
@@ -58,8 +72,18 @@ def test_ai_appointment_classification(monkeypatch):
             summary="Patient wants to reschedule.",
         )
 
+        return SimpleNamespace(
+            classification=classification,
+            model="test-model",
+            input_tokens=100,
+            output_tokens=30,
+            total_tokens=130,
+        )
+
     monkeypatch.setattr(
-        service, "classify_with_openai", fake_openai
+        service,
+        "classify_with_openai",
+        fake_openai,
     )
 
     result = service.classify_for_ticket(
@@ -70,6 +94,7 @@ def test_ai_appointment_classification(monkeypatch):
     assert result["assigned_team"] == "reception"
     assert result["requires_human_review"] is True
     assert result["classification_source"] == "openai"
+    assert result["model"] == "test-model"
 
 
 def test_ai_failure_uses_fallback(monkeypatch):
