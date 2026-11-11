@@ -4,6 +4,32 @@ from types import SimpleNamespace
 from app.services import classification_service as service
 
 
+def test_classification_records_latency(monkeypatch):
+    def fake_openai(message):
+        return SimpleNamespace(
+            category="appointment",
+            priority="normal",
+            assigned_team="reception",
+            requires_human_review=True,
+            summary="Appointment request",
+        )
+
+    monkeypatch.setattr(
+        service,
+        "classify_with_openai",
+        fake_openai,
+    )
+
+    result = service.classify_for_ticket(
+        "Can I visit the clinic on Friday?"
+    )
+
+    assert result["classification_source"] == "openai"
+    assert "latency_ms" in result
+    assert isinstance(result["latency_ms"], float)
+    assert result["latency_ms"] >= 0
+
+
 def test_ai_appointment_classification(monkeypatch):
     def fake_openai(message):
         return SimpleNamespace(
