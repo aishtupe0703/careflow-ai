@@ -61,6 +61,14 @@ def classify_for_ticket(message: str) -> dict:
             type(exc).__name__,
         )
 
+        if fallback["category"] == "general":
+            return {
+                **fallback,
+                "priority": "high",
+                "requires_human_review": True,
+                "classification_source": "fallback",
+            }
+
         return {
             **fallback,
             "classification_source": "fallback",

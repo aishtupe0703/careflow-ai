@@ -25,6 +25,7 @@ def test_ai_appointment_classification(monkeypatch):
     assert result["category"] == "appointment"
     assert result["assigned_team"] == "reception"
     assert result["requires_human_review"] is True
+    assert result["classification_source"] == "openai"
 
 
 def test_ai_failure_uses_fallback(monkeypatch):
@@ -41,6 +42,7 @@ def test_ai_failure_uses_fallback(monkeypatch):
 
     assert result["category"] == "billing"
     assert result["assigned_team"] == "billing"
+    assert result["classification_source"] == "fallback"
 
 
 def test_emergency_bypasses_openai(monkeypatch):
@@ -75,3 +77,22 @@ def test_emergency_classification_source(monkeypatch):
 
     assert result["category"] == "potential_emergency"
     assert result["classification_source"] == "safety_rule"
+
+def test_unknown_message_fallback_is_high_priority(monkeypatch):
+    def failing_openai(message):
+        raise RuntimeError("Simulated OpenAI outage")
+
+    monkeypatch.setattr(
+        service,
+        "classify_with_openai",
+        failing_openai,
+    )
+
+    result = service.classify_for_ticket(
+        "My mother suddenly became confused and weak."
+    )
+
+    assert result["classification_source"] == "fallback"
+    assert result["category"] == "general"
+    assert result["priority"] == "high"
+    assert result["requires_human_review"] is True

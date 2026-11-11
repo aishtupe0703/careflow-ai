@@ -1,5 +1,8 @@
 
 import time
+import csv
+from datetime import datetime, timezone
+from pathlib import Path
 
 from app.services.classification_service import classify_for_ticket
 from evals.test_cases import TEST_CASES
@@ -79,6 +82,28 @@ def run_evaluation():
         source_counts[source] = (
             source_counts.get(source, 0) + 1
         )
+
+    output_dir = Path("evals/results")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    output_file = output_dir / f"evaluation_{timestamp}.csv"
+
+    with output_file.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "expected",
+                "predicted",
+                "passed",
+                "latency",
+                "source",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(results)
+
+    print(f"\nResults saved to: {output_file}")
 
     # 5. Final report
     print("\n===== CareFlow AI Evaluation =====")
